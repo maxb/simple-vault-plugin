@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"os"
-	"sync"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -13,19 +12,16 @@ import (
 
 type backend struct {
 	framework.Backend
-	initOnce                sync.Once
 	thingWeNeedToInitialize int
 }
 
-func (b *backend) init() {
+func (b *backend) init(context.Context, *logical.InitializationRequest) error {
 	// Initialize here
 	b.thingWeNeedToInitialize = 42
+	return nil
 }
 
 func (b *backend) doSomething(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// Initialization actually triggered here
-	b.initOnce.Do(b.init)
-
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"hello":                   "world",
@@ -47,7 +43,8 @@ func factory(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 				},
 			},
 		},
-		BackendType: logical.TypeLogical,
+		BackendType:    logical.TypeLogical,
+		InitializeFunc: b.init,
 	}
 
 	// Don't initialize more than necessary here
